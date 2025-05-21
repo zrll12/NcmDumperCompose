@@ -25,6 +25,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import cc.vastsea.zrll.ncmdumpercompose.data.PreferencesManager
 import cc.vastsea.zrll.ncmdumpercompose.utils.FormatUtils
@@ -80,7 +81,7 @@ class SettingTab : Tab {
                     Text(
                         "目录设置",
                         style = MaterialTheme.typography.titleLarge,
-                        modifier = Modifier.padding(horizontal = 16.dp)
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 5.dp)
                     )
                     SettingItem(
                         title = "输入目录",
@@ -117,16 +118,15 @@ class SettingTab : Tab {
                     text = title,
                     style = MaterialTheme.typography.titleMedium
                 )
-                val displayText = if (subtitle.length > 30) {
-                    "...${subtitle.takeLast(30)}"
-                } else {
-                    subtitle
+                if (!subtitle.isEmpty()) {
+                    Text(
+                        text = subtitle,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.StartEllipsis
+                    )
                 }
-                Text(
-                    text = displayText,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
             }
             Icon(
                 imageVector = Icons.AutoMirrored.Default.KeyboardArrowRight,

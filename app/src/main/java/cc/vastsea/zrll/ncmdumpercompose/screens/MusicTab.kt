@@ -1,6 +1,7 @@
 package cc.vastsea.zrll.ncmdumpercompose.screens
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -22,6 +23,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.platform.LocalContext
@@ -70,7 +72,6 @@ class MusicTab : Tab {
             modifier = Modifier
                 .fillMaxSize()
         ) {
-            // 搜索框
             OutlinedTextField(
                 value = searchQuery,
                 onValueChange = { searchQuery = it },
@@ -79,8 +80,22 @@ class MusicTab : Tab {
                     .padding(horizontal = 16.dp, vertical = 8.dp),
                 placeholder = { Text("搜索音乐文件") },
                 leadingIcon = { Icon(Icons.Default.Search, contentDescription = "搜索") },
-                singleLine = true
+                singleLine = true,
             )
+
+            if (inputDir.isNullOrEmpty()) {
+                Column(
+                    modifier = Modifier.fillMaxSize(),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    Text(
+                        text = "没有设置输入目录",
+                        style = MaterialTheme.typography.titleMedium,
+                        modifier = Modifier.padding(16.dp)
+                    )
+                }
+            }
 
             LazyColumn(
                 modifier = Modifier.fillMaxSize()
@@ -105,7 +120,7 @@ class MusicTab : Tab {
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .clickable(onClick = {navigator.push(MusicDetailScreen(file))})
+                    .clickable(onClick = { navigator.push(MusicDetailScreen(file)) })
                     .padding(16.dp)
             ) {
                 Text(

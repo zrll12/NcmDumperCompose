@@ -12,6 +12,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import cc.vastsea.zrll.ncmdumpercompose.model.NcmFile
 import cc.vastsea.zrll.ncmdumpercompose.utils.FormatUtils
@@ -28,7 +29,13 @@ data class MusicDetailScreen(val file: NcmFile) : Screen {
         Scaffold(
             topBar = {
                 TopAppBar(
-                    title = { Text(FormatUtils.formatNcmName(file.name).second) },
+                    title = {
+                        Text(
+                            FormatUtils.formatNcmName(file.name).second,
+                            overflow = TextOverflow.Ellipsis,
+                            maxLines = 1
+                        )
+                    },
                     navigationIcon = {
                         IconButton(onClick = { navigator.pop() }) {
                             Icon(
