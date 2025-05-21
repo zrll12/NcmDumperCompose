@@ -20,34 +20,21 @@ import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import cafe.adriel.voyager.navigator.tab.LocalTabNavigator
-import cafe.adriel.voyager.navigator.tab.Tab
-import cafe.adriel.voyager.navigator.tab.TabOptions
 import cc.vastsea.zrll.ncmdumpercompose.data.PreferencesManager
 import cc.vastsea.zrll.ncmdumpercompose.utils.FormatUtils
+import io.github.hristogochev.vortex.navigator.LocalNavigator
+import io.github.hristogochev.vortex.tab.Tab
+import io.github.hristogochev.vortex.util.currentOrThrow
 
 class HomeTab : Tab {
-    override val options: TabOptions
-        @Composable
-        get() {
-            val title = "Home"
-            val icon = rememberVectorPainter(Icons.Default.Home)
-
-            return remember {
-                TabOptions(
-                    index = 0u,
-                    title = title,
-                    icon = icon
-                )
-            }
-        }
+    override val index: UInt = 0u
 
     @Composable
     override fun Content() {
         val context = LocalContext.current
         val preferencesManager = remember { PreferencesManager(context) }
 
-        val tabNavigator = LocalTabNavigator.current
+        val tabNavigator = LocalNavigator.currentOrThrow
 
         Column(
             modifier = Modifier

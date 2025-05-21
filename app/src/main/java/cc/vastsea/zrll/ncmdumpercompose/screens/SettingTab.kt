@@ -26,27 +26,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import cafe.adriel.voyager.navigator.tab.Tab
-import cafe.adriel.voyager.navigator.tab.TabOptions
 import cc.vastsea.zrll.ncmdumpercompose.data.PreferencesManager
 import cc.vastsea.zrll.ncmdumpercompose.utils.FormatUtils
+import io.github.hristogochev.vortex.tab.Tab
 import kotlinx.coroutines.launch
 
 class SettingTab : Tab {
-    override val options: TabOptions
-        @Composable
-        get() {
-            val title = "Settings"
-            val icon = rememberVectorPainter(Icons.Default.Settings)
-
-            return remember {
-                TabOptions(
-                    index = 0u,
-                    title = title,
-                    icon = icon
-                )
-            }
-        }
+    override val index: UInt = 2u
 
     @Composable
     override fun Content() {

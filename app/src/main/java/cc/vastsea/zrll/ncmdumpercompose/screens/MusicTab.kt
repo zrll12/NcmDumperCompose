@@ -1,5 +1,6 @@
 package cc.vastsea.zrll.ncmdumpercompose.screens
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -26,28 +27,17 @@ import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
-import cafe.adriel.voyager.navigator.tab.Tab
-import cafe.adriel.voyager.navigator.tab.TabOptions
 import cc.vastsea.zrll.ncmdumpercompose.data.PreferencesManager
 import cc.vastsea.zrll.ncmdumpercompose.model.NcmFile
 import cc.vastsea.zrll.ncmdumpercompose.utils.FileUtils
 import cc.vastsea.zrll.ncmdumpercompose.utils.FormatUtils
+import io.github.hristogochev.vortex.navigator.LocalNavigator
+import io.github.hristogochev.vortex.navigator.parentOrThrow
+import io.github.hristogochev.vortex.tab.Tab
+import io.github.hristogochev.vortex.util.currentOrThrow
 
 class MusicTab : Tab {
-    override val options: TabOptions
-        @Composable
-        get() {
-            val title = "Music"
-            val icon = rememberVectorPainter(Icons.Default.MusicNote)
-
-            return remember {
-                TabOptions(
-                    index = 0u,
-                    title = title,
-                    icon = icon
-                )
-            }
-        }
+    override val index: UInt = 1u
 
     @Composable
     override fun Content() {
@@ -105,6 +95,8 @@ class MusicTab : Tab {
 
     @Composable
     private fun NcmFileItem(file: NcmFile) {
+        val navigator = LocalNavigator.currentOrThrow.parentOrThrow
+
         Card(
             modifier = Modifier
                 .fillMaxSize()
@@ -112,6 +104,8 @@ class MusicTab : Tab {
         ) {
             Column(
                 modifier = Modifier
+                    .fillMaxSize()
+                    .clickable(onClick = {navigator.push(MusicDetailScreen(file))})
                     .padding(16.dp)
             ) {
                 Text(
