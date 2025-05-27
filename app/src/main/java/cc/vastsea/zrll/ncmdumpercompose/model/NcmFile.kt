@@ -95,15 +95,11 @@ data class NcmFile(
 
 sealed class TaskState {
     data object Wait : TaskState()
-    data object Dumping : TaskState()
-    data object Error : TaskState()
     data object Dumped : TaskState()
 
     fun getIcon(): ImageVector {
         return when (this) {
             is Wait -> Icons.Default.HourglassEmpty
-            is Dumping -> Icons.Default.Sync
-            is Error -> Icons.Default.Error
             is Dumped -> Icons.Default.Done
         }
     }
@@ -112,9 +108,7 @@ sealed class TaskState {
     fun getBackgroundColor(): Color {
         val isDarkTheme = isSystemInDarkTheme()
         return when (this) {
-            is Wait -> if (isDarkTheme) Color(0xFF442C00) else Color(0xFFFFF3E0) // Orange
-            is Dumping -> if (isDarkTheme) Color(0xFF001E2F) else Color(0xFFE3F2FD) // Blue
-            is Error -> if (isDarkTheme) Color(0xFF410002) else Color(0xFFFFCDD2) // Red
+            is Wait -> if (isDarkTheme) Color(0xFF001E2F) else Color(0xFFE3F2FD) // Blue
             is Dumped -> if (isDarkTheme) Color(0xFF002106) else Color(0xFFC8E6C9) // Green
         }
     }

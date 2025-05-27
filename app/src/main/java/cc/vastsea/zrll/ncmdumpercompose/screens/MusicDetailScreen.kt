@@ -7,19 +7,18 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -36,7 +35,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import cc.vastsea.zrll.ncmdumpercompose.data.PreferencesManager
-import kotlinx.coroutines.launch
 import cc.vastsea.zrll.ncmdumpercompose.model.NcmFile
 import cc.vastsea.zrll.ncmdumpercompose.utils.FileUtils
 import cc.vastsea.zrll.ncmdumpercompose.utils.FormatUtils
@@ -44,9 +42,7 @@ import cc.vastsea.zrll.ncmdumpercompose.utils.NcmUtils
 import io.github.hristogochev.vortex.navigator.LocalNavigator
 import io.github.hristogochev.vortex.screen.Screen
 import io.github.hristogochev.vortex.util.currentOrThrow
-import java.io.File
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
+import kotlinx.coroutines.launch
 
 data class MusicDetailScreen(val file: NcmFile) : Screen {
     @OptIn(ExperimentalMaterial3Api::class)
@@ -115,10 +111,7 @@ data class MusicDetailScreen(val file: NcmFile) : Screen {
                                     fileName = file.name,
                                     onSuccess = {
                                         isConverting = false
-                                        val savePath = "${FormatUtils.formatPath(outputDir)}/${file.name.replace(".ncm", ".mp3")}"
-                                        scope.launch {
-                                            snackbarHostState.showSnackbar("已保存至: $savePath")
-                                        }
+                                        navigator.pop()
                                     },
                                     onFailure = {
                                         isConverting = false
@@ -129,8 +122,8 @@ data class MusicDetailScreen(val file: NcmFile) : Screen {
                             }
                         },
                         enabled = !isConverting
-                    ) { 
-                        Text(if (isConverting) "转换中..." else "转换") 
+                    ) {
+                        Text(if (isConverting) "转换中..." else "转换")
                     }
                 }
 
@@ -139,7 +132,8 @@ data class MusicDetailScreen(val file: NcmFile) : Screen {
                     modifier = Modifier.padding(bottom = 8.dp)
                 )
 
-                Text("Album: ${metadata.album}",
+                Text(
+                    "Album: ${metadata.album}",
                     modifier = Modifier.padding(bottom = 8.dp)
                 )
 

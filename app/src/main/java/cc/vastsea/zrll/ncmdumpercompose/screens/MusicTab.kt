@@ -8,10 +8,10 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Card
-import androidx.compose.material3.CardColors
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -65,7 +65,8 @@ class MusicTab : Tab {
         LaunchedEffect(inputDir, finalOutputDir) {
             if (!inputDir.isNullOrEmpty() && finalOutputDir.isNotEmpty()) {
                 kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-                    val files = FileUtils.fetchNcmFileUri(context, inputDir!!.toUri(), outputDir!!.toUri())
+                    val files =
+                        FileUtils.fetchNcmFileUri(context, inputDir!!.toUri(), outputDir!!.toUri())
                     files.collect { fileList ->
                         ncmFiles = fileList
                     }
@@ -110,7 +111,11 @@ class MusicTab : Tab {
                     key = { it.name },
                     contentType = { "ncm_file" }
                 ) { filePath ->
-                    NcmFileItem(filePath, Modifier.animateItem())
+                    NcmFileItem(
+                        filePath, Modifier.animateItem(),
+                        first = filePath == filteredFiles.first(),
+                        last = filePath == filteredFiles.last()
+                    )
                 }
             }
         }
@@ -118,14 +123,25 @@ class MusicTab : Tab {
 
 
     @Composable
-    private fun NcmFileItem(file: NcmFile, modifier: Modifier) {
+    private fun NcmFileItem(
+        file: NcmFile,
+        modifier: Modifier,
+        first: Boolean = false,
+        last: Boolean = false
+    ) {
         val navigator = LocalNavigator.currentOrThrow.parentOrThrow
 
         Card(
             modifier = modifier
                 .fillMaxSize()
-                .padding(8.dp),
-            colors = CardDefaults.cardColors(containerColor = file.taskState.getBackgroundColor())
+                .padding(horizontal = 13.dp, vertical = 3.dp),
+            colors = CardDefaults.cardColors(containerColor = file.taskState.getBackgroundColor()),
+            shape = RoundedCornerShape(
+                topStart = if (first) 15.dp else 8.dp,
+                topEnd = if (first) 15.dp else 8.dp,
+                bottomStart = if (last) 15.dp else 8.dp,
+                bottomEnd = if (last) 15.dp else 8.dp
+            )
         ) {
             Column(
                 modifier = Modifier
