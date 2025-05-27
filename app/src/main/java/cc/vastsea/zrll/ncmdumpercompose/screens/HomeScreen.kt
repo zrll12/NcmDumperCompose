@@ -35,7 +35,7 @@ class HomeScreen : Screen {
                     CurrentTab(
                         navigator, modifier = Modifier.padding(it),
                         defaultOnScreenAppearTransition = FadeTransition,
-                        defaultOnScreenDisappearTransition = FadeTransition,
+//                        defaultOnScreenDisappearTransition = FadeTransition,
                     )
                 },
                 bottomBar = {
@@ -76,5 +76,4 @@ class HomeScreen : Screen {
             alwaysShowLabel = false
         )
     }
-
 }

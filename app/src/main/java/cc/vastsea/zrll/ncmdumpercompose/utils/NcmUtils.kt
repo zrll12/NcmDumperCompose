@@ -2,6 +2,8 @@ package cc.vastsea.zrll.ncmdumpercompose.utils
 
 import android.content.ContentValues
 import android.content.Context
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.os.Environment
 import android.os.ParcelFileDescriptor
 import android.provider.MediaStore
@@ -64,6 +66,7 @@ object NcmUtils {
         fileName: String,
         onSuccess: () -> Unit,
         onFailure: () -> Unit,
+        outputDir: String,
         context: Context
     ) {
         kotlin.runCatching {
@@ -104,7 +107,7 @@ object NcmUtils {
                 inputStream.read(artwork)
             }
             inputStream.skip(artworkFrameBytes.toIntLE() - artworkSize.toLong())
-            saveAudioFile(inputStream, fileName, musicMetadata, rc4Key, artwork, context)
+            saveAudioFile(inputStream, fileName, musicMetadata, rc4Key, artwork, outputDir, context)
         }.onFailure {
             it.printStackTrace()
             inputStream.close()
@@ -112,6 +115,51 @@ object NcmUtils {
         }.onSuccess {
             onSuccess()
         }
+    }
+
+    @OptIn(ExperimentalEncodingApi::class)
+    fun getNcmMetadata(inputStream: InputStream): NCMMetadata {
+        val magicBytes = ByteArray(8)
+        inputStream.read(magicBytes)
+        check(String(magicBytes, Charsets.UTF_8) == MAGIC_VALUE) {
+            "Invalid magic value"
+        }
+        inputStream.skip(2)
+        val rc4KeyEncSizeBytes = ByteArray(4)
+        inputStream.read(rc4KeyEncSizeBytes)
+        val rc4KeyEncSize = rc4KeyEncSizeBytes.toIntLE()
+        val rc4KeyEncBytes = ByteArray(rc4KeyEncSize)
+        inputStream.read(rc4KeyEncBytes)
+        for (i in rc4KeyEncBytes.indices) {
+            rc4KeyEncBytes[i] = rc4KeyEncBytes[i] xor 0x64
+        }
+        val rc4Key = aesDecrypt(encryptedData = rc4KeyEncBytes, CORE_KEY)
+        val metadataSizeBytes = ByteArray(4)
+        inputStream.read(metadataSizeBytes)
+        val metadataSize = metadataSizeBytes.toIntLE()
+        val metadataBytes = ByteArray(metadataSize)
+        inputStream.read(metadataBytes)
+        for (i in metadataBytes.indices) {
+            metadataBytes[i] = metadataBytes[i] xor 0x63
+        }
+        val metadata =
+            aesDecrypt(Base64.decode(metadataBytes, 22, metadataBytes.size), MATA_KEY)
+        return decodeMetadata(metadata)
+    }
+    
+    fun getNcmArtwork(inputStream: InputStream): Bitmap? {
+        inputStream.skip(5)
+        val artworkFrameBytes = ByteArray(4)
+        inputStream.read(artworkFrameBytes)
+        val artworkSizeBytes = ByteArray(4)
+        inputStream.read(artworkSizeBytes)
+        val artworkSize = artworkSizeBytes.toIntLE()
+        if (artworkSize > 0) {
+            val artwork = ByteArray(artworkSize)
+            inputStream.read(artwork)
+            return BitmapFactory.decodeByteArray(artwork, 0, artwork.size)
+        }
+        return null
     }
 
     private fun decodeMetadata(metadata: ByteArray): NCMMetadata {
@@ -141,6 +189,7 @@ object NcmUtils {
         musicMetadata: NCMMetadata,
         rc4Key: ByteArray,
         artworkByte: ByteArray,
+        outputDir: String,
         context: Context
     ) = withContext(
         Dispatchers.IO
@@ -156,7 +205,7 @@ object NcmUtils {
             put(MediaStore.Audio.Media.IS_PENDING, 1)
             put(
                 MediaStore.Audio.Media.RELATIVE_PATH,
-                "${Environment.DIRECTORY_MUSIC}/NcmDumperCompose"
+                outputDir
             )
         }
 

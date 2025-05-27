@@ -9,15 +9,23 @@ import java.io.File
 import java.io.InputStream
 import androidx.core.net.toUri
 import cc.vastsea.zrll.ncmdumpercompose.model.NcmFile
+import cc.vastsea.zrll.ncmdumpercompose.model.TaskState
+import kotlinx.coroutines.flow.first
+import java.io.FileInputStream
 
 object FileUtils {
-    fun fetchNcmFileUri(context: Context, inputDirUri: Uri): Flow<List<NcmFile>> = flow {
+    fun fetchNcmFileUri(context: Context, inputDirUri: Uri, outputDir: Uri): Flow<List<NcmFile>> = flow {
         val resultList = mutableListOf<NcmFile>()
         val ncmSuffix = ".ncm"
         val contentResolver = context.contentResolver
         val folderDocumentId = DocumentsContract.getTreeDocumentId(inputDirUri)
         val childrenUri =
             DocumentsContract.buildChildDocumentsUriUsingTree(inputDirUri, folderDocumentId)
+
+        // 获取输出目录中的MP3文件列表
+        val mp3Files = fetchMp3FileNames(context, outputDir)
+            .first()
+            .toSet()
 
         contentResolver.query(
             childrenUri, arrayOf(
@@ -39,12 +47,15 @@ object FileUtils {
                 if (!mimeType.equals(DocumentsContract.Document.MIME_TYPE_DIR, ignoreCase = true) &&
                     fileName.endsWith(ncmSuffix, ignoreCase = true)
                 ) {
+                    val nameWithoutExt = fileName.removeSuffix(ncmSuffix)
+                    val taskState = if (mp3Files.contains(nameWithoutExt)) TaskState.Dumped else TaskState.Wait
                     resultList.add(
                         NcmFile(
                             documentUri,
                             size,
-                            fileName.removeSuffix(ncmSuffix),
-                            lastModified
+                            nameWithoutExt,
+                            lastModified,
+                            taskState = taskState
                         )
                     )
                 }
@@ -53,20 +64,33 @@ object FileUtils {
         emit(resultList.sortedByDescending { it.lastModified })
     }
 
-    fun fetchMp3FileNames(folder: String): Flow<List<String>> = flow {
-        val mp3FileNames = mutableListOf<String>()
-        val file = File(folder)
-        if (file.exists() && file.isDirectory) {
-            val files = file.listFiles()
-            if (files != null) {
-                for (f in files) {
-                    if (f.isFile && f.name.endsWith(".mp3")) {
-                        mp3FileNames.add(f.name)
-                    }
+    fun fetchMp3FileNames(context: Context, folder: Uri): Flow<List<String>> = flow {
+        val resultList = mutableListOf<String>()
+        val ncmSuffix = ".mp3"
+        val contentResolver = context.contentResolver
+        val folderDocumentId = DocumentsContract.getTreeDocumentId(folder)
+        val childrenUri =
+            DocumentsContract.buildChildDocumentsUriUsingTree(folder, folderDocumentId)
+
+        contentResolver.query(
+            childrenUri, arrayOf(
+                DocumentsContract.Document.COLUMN_MIME_TYPE,
+                DocumentsContract.Document.COLUMN_DISPLAY_NAME
+            ), null, null, null
+        )?.use { cursor ->
+            while (cursor.moveToNext()) {
+                val mimeType = cursor.getString(0)
+                val fileName = cursor.getString(1) ?: "unknown.mp3"
+                if (!mimeType.equals(DocumentsContract.Document.MIME_TYPE_DIR, ignoreCase = true) &&
+                    fileName.endsWith(ncmSuffix, ignoreCase = true)
+                ) {
+                    val nameWithoutExt = fileName.removeSuffix(ncmSuffix)
+                    resultList.add(nameWithoutExt)
                 }
             }
         }
-        emit(mp3FileNames)
+
+        emit(resultList)
     }
 
     fun isValidNcmOrMp3File(filePath: String): Boolean {
@@ -75,13 +99,9 @@ object FileUtils {
                 (file.name.endsWith(".ncm") || file.name.endsWith(".mp3"))
     }
 
-    fun getFileInputStream(filePath: String): InputStream? {
-        val file = File(filePath)
-        return if (file.exists() && file.isFile) {
-            file.inputStream()
-        } else {
-            null
-        }
+    fun getFileInputStream(context: Context, uri: Uri): InputStream? {
+        val pfd = context.contentResolver.openFileDescriptor(uri, "r")
+        return pfd?.fileDescriptor?.let { FileInputStream(it) }
     }
 
     fun getImageMIMEType(byteArray: ByteArray): String? {

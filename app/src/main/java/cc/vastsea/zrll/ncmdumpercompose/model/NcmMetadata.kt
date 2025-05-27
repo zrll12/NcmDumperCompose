@@ -23,7 +23,17 @@ data class NCMMetadata(
     val album: String,
     val musicId: Long,
     val format: String
-)
+) {
+//    fun toNcmFile(uri: Uri, size: Long, name: String, lastModified: Long, taskState: TaskState): NcmFile {
+//        return NcmFile(
+//            uri = uri,
+//            size = size,
+//            name = "${musicName} - ${artist.firstOrNull() ?: "Unknown"}",
+//            lastModified = lastModified,
+//            taskState = taskState
+//        )
+//    }
+}
 
 @Serializable
 data class MusicLyrics(val lyric: String = "")

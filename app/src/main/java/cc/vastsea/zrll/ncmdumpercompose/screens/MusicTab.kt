@@ -9,9 +9,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardColors
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -25,7 +26,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
@@ -59,11 +59,16 @@ class MusicTab : Tab {
             }
         }
 
-        LaunchedEffect(inputDir) {
-            if (!inputDir.isNullOrEmpty()) {
-                val files = FileUtils.fetchNcmFileUri(context, inputDir!!.toUri())
-                files.collect { fileList ->
-                    ncmFiles = fileList
+        val outputDir by preferencesManager.outputDirFlow.collectAsState(initial = "")
+        val finalOutputDir = outputDir?.let { "$it/NcmDumped" } ?: ""
+
+        LaunchedEffect(inputDir, finalOutputDir) {
+            if (!inputDir.isNullOrEmpty() && finalOutputDir.isNotEmpty()) {
+                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                    val files = FileUtils.fetchNcmFileUri(context, inputDir!!.toUri(), outputDir!!.toUri())
+                    files.collect { fileList ->
+                        ncmFiles = fileList
+                    }
                 }
             }
         }
@@ -100,8 +105,12 @@ class MusicTab : Tab {
             LazyColumn(
                 modifier = Modifier.fillMaxSize()
             ) {
-                items(filteredFiles) { filePath ->
-                    NcmFileItem(filePath)
+                items(
+                    items = filteredFiles,
+                    key = { it.name },
+                    contentType = { "ncm_file" }
+                ) { filePath ->
+                    NcmFileItem(filePath, Modifier.animateItem())
                 }
             }
         }
@@ -109,13 +118,14 @@ class MusicTab : Tab {
 
 
     @Composable
-    private fun NcmFileItem(file: NcmFile) {
+    private fun NcmFileItem(file: NcmFile, modifier: Modifier) {
         val navigator = LocalNavigator.currentOrThrow.parentOrThrow
 
         Card(
-            modifier = Modifier
+            modifier = modifier
                 .fillMaxSize()
-                .padding(8.dp)
+                .padding(8.dp),
+            colors = CardDefaults.cardColors(containerColor = file.taskState.getBackgroundColor())
         ) {
             Column(
                 modifier = Modifier
