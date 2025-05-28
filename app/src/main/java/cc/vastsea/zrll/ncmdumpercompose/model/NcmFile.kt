@@ -97,10 +97,11 @@ sealed class TaskState {
     data object Wait : TaskState()
     data object Dumped : TaskState()
 
-    fun getIcon(): ImageVector {
+    @Composable
+    fun getSelectedBackgroundColor(): Color {
         return when (this) {
-            is Wait -> Icons.Default.HourglassEmpty
-            is Dumped -> Icons.Default.Done
+            is Wait -> Color(0xFF4D6782) // Blue
+            is Dumped -> Color(0xFF146F57) // Green
         }
     }
 
@@ -108,8 +109,8 @@ sealed class TaskState {
     fun getBackgroundColor(): Color {
         val isDarkTheme = isSystemInDarkTheme()
         return when (this) {
-            is Wait -> if (isDarkTheme) Color(0xFF001E2F) else Color(0xFFE3F2FD) // Blue
-            is Dumped -> if (isDarkTheme) Color(0xFF002106) else Color(0xFFC8E6C9) // Green
+            is Wait -> if (isDarkTheme) Color(0xFF102136) else Color(0xFFE3F2FD) // Blue
+            is Dumped -> if (isDarkTheme) Color(0xFF102E2F) else Color(0xFFC8E6C9) // Green
         }
     }
 }

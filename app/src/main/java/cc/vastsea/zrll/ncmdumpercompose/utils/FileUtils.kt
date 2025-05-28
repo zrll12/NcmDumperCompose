@@ -14,7 +14,7 @@ import kotlinx.coroutines.flow.first
 import java.io.FileInputStream
 
 object FileUtils {
-    fun fetchNcmFileUri(context: Context, inputDirUri: Uri, outputDir: Uri): Flow<List<NcmFile>> = flow {
+    fun fetchNcmFileUri(context: Context, inputDirUri: Uri, outputDir: Uri?): Flow<List<NcmFile>> = flow {
         val resultList = mutableListOf<NcmFile>()
         val ncmSuffix = ".ncm"
         val contentResolver = context.contentResolver
@@ -23,9 +23,13 @@ object FileUtils {
             DocumentsContract.buildChildDocumentsUriUsingTree(inputDirUri, folderDocumentId)
 
         // 获取输出目录中的MP3文件列表
-        val mp3Files = fetchMp3FileNames(context, outputDir)
-            .first()
-            .toSet()
+        val mp3Files = if (outputDir != null) {
+            fetchMp3FileNames(context, outputDir)
+                .first()
+                .toSet()
+        } else {
+            emptySet()
+        }
 
         contentResolver.query(
             childrenUri, arrayOf(
@@ -48,7 +52,7 @@ object FileUtils {
                     fileName.endsWith(ncmSuffix, ignoreCase = true)
                 ) {
                     val nameWithoutExt = fileName.removeSuffix(ncmSuffix)
-                    val taskState = if (mp3Files.contains(nameWithoutExt)) TaskState.Dumped else TaskState.Wait
+                    val taskState = if (outputDir == null) TaskState.Wait else if (mp3Files.contains(nameWithoutExt)) TaskState.Dumped else TaskState.Wait
                     resultList.add(
                         NcmFile(
                             documentUri,

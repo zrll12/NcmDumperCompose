@@ -121,9 +121,9 @@ data class MusicDetailScreen(val file: NcmFile) : Screen {
                                 )
                             }
                         },
-                        enabled = !isConverting
+                        enabled = !isConverting && !outputDir.isNullOrEmpty()
                     ) {
-                        Text(if (isConverting) "转换中..." else "转换")
+                        Text(if (isConverting) "转换中..." else if (outputDir.isNullOrEmpty()) "请先设置输出目录" else "转换")
                     }
                 }
 
