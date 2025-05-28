@@ -45,6 +45,7 @@ import cc.vastsea.zrll.ncmdumpercompose.model.TaskState
 import cc.vastsea.zrll.ncmdumpercompose.utils.FileUtils
 import cc.vastsea.zrll.ncmdumpercompose.utils.FormatUtils
 import io.github.hristogochev.vortex.navigator.LocalNavigator
+import io.github.hristogochev.vortex.navigator.parentOrThrow
 import io.github.hristogochev.vortex.tab.Tab
 import io.github.hristogochev.vortex.util.currentOrThrow
 
@@ -53,7 +54,7 @@ class MusicTab : Tab {
 
     @Composable
     override fun Content() {
-        val navigator = LocalNavigator.currentOrThrow
+        val navigator = LocalNavigator.currentOrThrow.parentOrThrow
         val context = LocalContext.current
         val preferencesManager = remember { PreferencesManager(context) }
         val inputDir by preferencesManager.inputDirFlow.collectAsState(initial = "")
@@ -168,6 +169,18 @@ class MusicTab : Tab {
             LazyColumn(
                 modifier = Modifier.fillMaxSize()
             ) {
+                val handleItemClick = { file: NcmFile ->
+                    if (isSelectionMode) {
+                        selectedFiles = if (selectedFiles.contains(file.name)) {
+                            selectedFiles - file.name
+                        } else {
+                            selectedFiles + file.name
+                        }
+                    } else {
+                        navigator.push(MusicDetailScreen(file))
+                    }
+                }
+
                 items(
                     items = filteredFiles,
                     key = { it.name },
@@ -179,24 +192,13 @@ class MusicTab : Tab {
                         first = filePath == filteredFiles.first(),
                         last = filePath == filteredFiles.last(),
                         isSelected = selectedFiles.contains(filePath.name),
-                        isSelectionMode = isSelectionMode,
                         onLongClick = {
                             if (!isSelectionMode) {
                                 isSelectionMode = true
                                 selectedFiles = setOf(filePath.name)
                             }
                         },
-                        onClick = {
-                            if (isSelectionMode) {
-                                selectedFiles = if (selectedFiles.contains(filePath.name)) {
-                                    selectedFiles - filePath.name
-                                } else {
-                                    selectedFiles + filePath.name
-                                }
-                            } else {
-                                navigator.push(MusicDetailScreen(filePath))
-                            }
-                        }
+                        onClick = { handleItemClick(filePath) }
                     )
                 }
             }
@@ -210,7 +212,6 @@ class MusicTab : Tab {
         first: Boolean = false,
         last: Boolean = false,
         isSelected: Boolean = false,
-        isSelectionMode: Boolean = false,
         onLongClick: () -> Unit = {},
         onClick: () -> Unit = {}
     ) {
