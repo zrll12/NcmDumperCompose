@@ -1,5 +1,6 @@
 package cc.vastsea.zrll.ncmdumpercompose.screens
 
+import android.content.Context
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -36,6 +37,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import cc.vastsea.zrll.ncmdumpercompose.data.PreferencesManager
 import cc.vastsea.zrll.ncmdumpercompose.model.NcmFile
+import cc.vastsea.zrll.ncmdumpercompose.model.TaskState
 import cc.vastsea.zrll.ncmdumpercompose.utils.FileUtils
 import cc.vastsea.zrll.ncmdumpercompose.utils.FormatUtils
 import cc.vastsea.zrll.ncmdumpercompose.utils.NcmUtils
@@ -100,7 +102,13 @@ data class MusicDetailScreen(val file: NcmFile) : Screen {
                         .padding(bottom = 20.dp),
                     horizontalArrangement = Arrangement.Center,
                 ) {
-                    OutlinedButton(onClick = {}) { Text("网易云音乐打开") }
+                    OutlinedButton(onClick = {
+                        // Open this music in website https://music.163.com/#/song?id=
+                        FileUtils.openInBrowser(
+                            context,
+                            "https://music.163.com/#/song?id=${metadata.musicId}"
+                        )
+                    }) { Text("网易云音乐打开") }
                     Spacer(Modifier.padding(8.dp))
                     Button(
                         onClick = {
@@ -121,9 +129,11 @@ data class MusicDetailScreen(val file: NcmFile) : Screen {
                                 )
                             }
                         },
-                        enabled = !isConverting && !outputDir.isNullOrEmpty()
+                        enabled = !isConverting && file.taskState != TaskState.Dumped && !outputDir.isNullOrEmpty()
                     ) {
-                        Text(if (isConverting) "转换中..." else if (outputDir.isNullOrEmpty()) "请先设置输出目录" else "转换")
+                        Text(if (isConverting) "转换中..."
+                        else if (outputDir.isNullOrEmpty()) "请先设置输出目录"
+                        else if (file.taskState == TaskState.Dumped) "已转换" else "转换")
                     }
                 }
 
@@ -142,6 +152,19 @@ data class MusicDetailScreen(val file: NcmFile) : Screen {
                     modifier = Modifier.padding(bottom = 15.dp)
                 )
             }
+        }
+    }
+
+    private fun FileUtils.openInBrowser(context: Context, string: String) {
+        try {
+            val intent = android.content.Intent().apply {
+                action = android.content.Intent.ACTION_VIEW
+                data = android.net.Uri.parse(string)
+                addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            context.startActivity(intent)
+        } catch (e: Exception) {
+            e.printStackTrace()
         }
     }
 }
