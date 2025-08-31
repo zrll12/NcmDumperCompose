@@ -5,6 +5,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -16,22 +17,28 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckBoxOutlineBlank
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.SelectAll
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -44,10 +51,13 @@ import cc.vastsea.zrll.ncmdumpercompose.model.NcmFile
 import cc.vastsea.zrll.ncmdumpercompose.model.TaskState
 import cc.vastsea.zrll.ncmdumpercompose.utils.FileUtils
 import cc.vastsea.zrll.ncmdumpercompose.utils.FormatUtils
+import cc.vastsea.zrll.ncmdumpercompose.utils.NcmUtils
 import io.github.hristogochev.vortex.navigator.LocalNavigator
 import io.github.hristogochev.vortex.navigator.parentOrThrow
 import io.github.hristogochev.vortex.tab.Tab
 import io.github.hristogochev.vortex.util.currentOrThrow
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 class MusicTab : Tab {
     override val index: UInt = 1u
@@ -62,6 +72,11 @@ class MusicTab : Tab {
         var searchQuery by remember { mutableStateOf("") }
         var selectedFiles by remember { mutableStateOf<Set<String>>(emptySet()) }
         var isSelectionMode by remember { mutableStateOf(false) }
+        val snackbarHostState = remember { SnackbarHostState() }
+        val scope = rememberCoroutineScope()
+        var isJobRunning by remember { mutableStateOf(false) }
+        var jobProgress by remember { mutableIntStateOf(0) }
+        var refreshTrigger by remember { mutableIntStateOf(0) }
 
         val filteredFiles = remember(ncmFiles, searchQuery) {
             if (searchQuery.isEmpty()) {
@@ -69,16 +84,16 @@ class MusicTab : Tab {
             } else {
                 ncmFiles.filter { file ->
                     file.name.contains(searchQuery, ignoreCase = true)
-                }
+                }.sortedBy { it.taskState }
             }
         }
 
         val outputDir by preferencesManager.outputDirFlow.collectAsState(initial = "")
         val finalOutputDir = outputDir?.let { "$it/NcmDumped" } ?: ""
 
-        LaunchedEffect(inputDir, finalOutputDir) {
+        LaunchedEffect(inputDir, finalOutputDir, refreshTrigger) {
             if (!inputDir.isNullOrEmpty()) {
-                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                scope.launch(Dispatchers.IO) {
                     val files = if (finalOutputDir.isNotEmpty()) {
                         FileUtils.fetchNcmFileUri(context, inputDir!!.toUri(), outputDir!!.toUri())
                     } else {
@@ -138,17 +153,114 @@ class MusicTab : Tab {
                         }) {
                             Icon(Icons.Default.Close, contentDescription = "取消选择")
                         }
-                        IconButton(onClick = {
-                            // TODO: 实现批量转换功能
-                            selectedFiles.forEach { fileName ->
-                                // 处理选中的文件
+                        Box {
+                            var expanded by remember { mutableStateOf(false) }
+                            IconButton(
+                                onClick = {
+                                    expanded = true
+                                }
+                            ) {
+                                Icon(Icons.Default.MoreVert, contentDescription = "更多选项")
                             }
-                            isSelectionMode = false
-                            selectedFiles = emptySet()
-                        }) {
-                            Icon(Icons.Default.PlayArrow, contentDescription = "转换选中")
+
+                            DropdownMenu(
+                                expanded = expanded,
+                                onDismissRequest = { expanded = false }
+                            ) {
+                                DropdownMenuItem(
+                                    text = { Text("转换未转换文件") },
+                                    onClick = {
+                                        if (isJobRunning) {
+                                            return@DropdownMenuItem
+                                        }
+                                        scope.launch {
+                                            isJobRunning = true
+                                            jobProgress = 0
+                                            expanded = false
+
+                                            val filesToConvert =
+                                                selectedFiles.mapNotNull { fileName ->
+                                                    ncmFiles.find { it.name == fileName }
+                                                        ?.takeIf { it.taskState != TaskState.Dumped }
+                                                }
+
+                                            if (filesToConvert.isEmpty()) {
+                                                isJobRunning = false
+                                                return@launch
+                                            }
+                                            filesToConvert.forEach { file ->
+                                                try {
+                                                    NcmUtils.dumpNCM(
+                                                        inputStream = FileUtils.getFileInputStream(
+                                                            context,
+                                                            file.uri
+                                                        )!!,
+                                                        fileName = file.name,
+                                                        onSuccess = {
+                                                            jobProgress += 1
+                                                        },
+                                                        onFailure = {
+                                                            scope.launch {
+                                                                snackbarHostState.showSnackbar("转换${file.name}失败")
+                                                            }
+                                                        },
+                                                        outputDir = FormatUtils.formatPath(outputDir),
+                                                        context = context
+                                                    )
+                                                } catch (e: Exception) {
+                                                    e.printStackTrace()
+                                                    scope.launch {
+                                                        snackbarHostState.showSnackbar("转换${file.name}失败")
+                                                    }
+                                                    jobProgress += 1
+                                                }
+                                            }
+
+                                            isJobRunning = false
+                                            selectedFiles = emptySet()
+                                            isSelectionMode = false
+                                            refreshTrigger++
+                                        }
+                                    }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("删除mp3文件") },
+                                    onClick = { /* Do something... */ }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("删除ncm文件") },
+                                    onClick = { /* Do something... */ }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("删除mp3并加入黑名单") },
+                                    onClick = { /* Do something... */ }
+                                )
+                            }
                         }
+//                        IconButton(onClick = {
+//                            // TODO: 实现批量转换功能
+//                            selectedFiles.forEach { fileName ->
+//                                // 处理选中的文件
+//                            }
+//                            isSelectionMode = false
+//                            selectedFiles = emptySet()
+//                        }) {
+//                            Icon(Icons.Default.PlayArrow, contentDescription = "转换选中")
+//                        }
                     }
+                }
+            }
+
+            if (isJobRunning) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 5.dp),
+                ) {
+                    LinearProgressIndicator(
+                        progress = { jobProgress.toFloat() / selectedFiles.size.toFloat() },
+                        modifier = Modifier.fillMaxWidth()
+                    )
                 }
             }
 
@@ -171,10 +283,12 @@ class MusicTab : Tab {
             ) {
                 val handleItemClick = { file: NcmFile ->
                     if (isSelectionMode) {
-                        selectedFiles = if (selectedFiles.contains(file.name)) {
-                            selectedFiles - file.name
-                        } else {
-                            selectedFiles + file.name
+                        if (!isJobRunning) {
+                            selectedFiles = if (selectedFiles.contains(file.name)) {
+                                selectedFiles - file.name
+                            } else {
+                                selectedFiles + file.name
+                            }
                         }
                     } else {
                         navigator.push(MusicDetailScreen(file))

@@ -94,9 +94,15 @@ data class NcmFile(
     }
 }
 
-sealed class TaskState {
+sealed class TaskState : Comparable<TaskState> {
     data object Wait : TaskState()
     data object Dumped : TaskState()
+
+    override fun compareTo(other: TaskState): Int {
+        if (this is Wait && other is Dumped) return -1
+        if (this is Dumped && other is Wait) return 1
+        return 0
+    }
 
     @Composable
     fun getSelectedBackgroundColor(): Color {
