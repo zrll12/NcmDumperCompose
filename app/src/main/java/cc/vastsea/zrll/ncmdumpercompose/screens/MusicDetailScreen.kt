@@ -197,24 +197,28 @@ data class MusicDetailScreen(val file: NcmFile) : Screen {
                                     text = { Text("全部删除") },
                                     onClick = {
                                         expanded = false
-                                        file.mp3Uri?.let { uri ->
-                                            scope.launch {
+                                        scope.launch {
+                                            var allSuccess = true
+                                            var errorMessage = ""
+                                            
+                                            file.mp3Uri?.let { uri ->
                                                 val success = FileUtils.deleteFile(context, uri)
-                                                if (success) {
-                                                    navigator.pop()
-                                                } else {
-                                                    snackbarHostState.showSnackbar("删除失败")
+                                                if (!success) {
+                                                    allSuccess = false
+                                                    errorMessage = "删除MP3失败"
                                                 }
                                             }
-                                        }
-                                        file.uri.let { uri ->
-                                            scope.launch {
-                                                val success = FileUtils.deleteFile(context, uri)
-                                                if (success) {
-                                                    navigator.pop()
-                                                } else {
-                                                    snackbarHostState.showSnackbar("删除失败")
-                                                }
+                                            
+                                            val ncmSuccess = FileUtils.deleteFile(context, file.uri)
+                                            if (!ncmSuccess) {
+                                                allSuccess = false
+                                                errorMessage = if (errorMessage.isEmpty()) "删除NCM失败" else "删除失败"
+                                            }
+                                            
+                                            if (allSuccess) {
+                                                navigator.pop()
+                                            } else {
+                                                snackbarHostState.showSnackbar(errorMessage)
                                             }
                                         }
                                     }
@@ -222,6 +226,7 @@ data class MusicDetailScreen(val file: NcmFile) : Screen {
                                 DropdownMenuItem(
                                     text = { Text("删除mp3并加入黑名单") },
                                     onClick = {
+                                        expanded = false
                                         file.mp3Uri?.let { uri ->
                                             scope.launch {
                                                 val success = FileUtils.deleteFile(context, uri)

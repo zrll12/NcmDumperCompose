@@ -61,19 +61,14 @@ object FileUtils {
                                     nameWithoutExt
                                 )
                             ) TaskState.Dumped else TaskState.Wait
-                        val mp3File = mp3Files.firstOrNull {
-                            it.contains(
-                                fileName.substring(
-                                    0,
-                                    fileName.length - 4
-                                )
-                            )
-                        }?.let { "$it.mp3" }
+                        val mp3File = mp3Files.firstOrNull { it == nameWithoutExt }?.let { "$it.mp3" }
                         resultList.add(
                             NcmFile(
                                 documentUri,
-                                if (mp3File != null) {
-                                    DocumentsContract.buildDocumentUriUsingTree(outputDir, mp3File)
+                                if (mp3File != null && outputDir != null) {
+                                    val outputFolderDocumentId = DocumentsContract.getTreeDocumentId(outputDir)
+                                    val mp3DocumentId = "$outputFolderDocumentId/$mp3File"
+                                    DocumentsContract.buildDocumentUriUsingTree(outputDir, mp3DocumentId)
                                 } else {
                                     null
                                 },
