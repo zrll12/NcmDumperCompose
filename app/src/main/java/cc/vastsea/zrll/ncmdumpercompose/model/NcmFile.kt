@@ -23,6 +23,7 @@ import kotlin.io.encoding.ExperimentalEncodingApi
 
 data class NcmFile(
     val uri: Uri,
+    val mp3Uri: Uri?,
     val size: Long,
     val name: String,
     val lastModified: Long,

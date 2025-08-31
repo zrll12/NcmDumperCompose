@@ -1,16 +1,22 @@
 package cc.vastsea.zrll.ncmdumpercompose.screens
 
 import android.content.Context
+import android.widget.Scroller
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Button
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -86,6 +92,7 @@ data class MusicDetailScreen(val file: NcmFile) : Screen {
                 modifier = Modifier
                     .padding(it)
                     .padding(20.dp)
+                    .verticalScroll(rememberScrollState())
             ) {
                 Image(
                     bitmap = artwork!!.asImageBitmap(),
@@ -110,30 +117,125 @@ data class MusicDetailScreen(val file: NcmFile) : Screen {
                         )
                     }) { Text("网易云音乐打开") }
                     Spacer(Modifier.padding(8.dp))
-                    Button(
-                        onClick = {
-                            scope.launch {
-                                isConverting = true
-                                NcmUtils.dumpNCM(
-                                    inputStream = FileUtils.getFileInputStream(context, file.uri)!!,
-                                    fileName = file.name,
-                                    onSuccess = {
-                                        isConverting = false
-                                        navigator.pop()
-                                    },
-                                    onFailure = {
-                                        isConverting = false
-                                    },
-                                    outputDir = FormatUtils.formatPath(outputDir),
-                                    context = context
+                    if (file.taskState != TaskState.Dumped) {
+                        Button(
+                            onClick = {
+                                scope.launch {
+                                    isConverting = true
+                                    NcmUtils.dumpNCM(
+                                        inputStream = FileUtils.getFileInputStream(
+                                            context,
+                                            file.uri
+                                        )!!,
+                                        fileName = file.name,
+                                        onSuccess = {
+                                            isConverting = false
+                                            navigator.pop()
+                                        },
+                                        onFailure = {
+                                            isConverting = false
+                                        },
+                                        outputDir = FormatUtils.formatPath(outputDir),
+                                        context = context
+                                    )
+                                }
+                            },
+                            enabled = !isConverting && !outputDir.isNullOrEmpty(),
+                        ) {
+                            Text(
+                                if (isConverting) "转换中..."
+                                else if (outputDir.isNullOrEmpty()) "请先设置输出目录" else "转换"
+                            )
+                        }
+                    } else {
+                        var expanded by remember { mutableStateOf(false) }
+                        Box {
+                            OutlinedButton(
+                                onClick = { expanded = true },
+                            ) {
+                                Text("删除")
+                            }
+
+
+                            DropdownMenu(
+                                expanded = expanded,
+                                onDismissRequest = { expanded = false }
+                            ) {
+                                DropdownMenuItem(
+                                    text = { Text("删除mp3") },
+                                    onClick = {
+                                        expanded = false
+                                        file.mp3Uri?.let { uri ->
+                                            scope.launch {
+                                                val success = FileUtils.deleteFile(context, uri)
+                                                if (success) {
+                                                    navigator.pop()
+                                                } else {
+                                                    snackbarHostState.showSnackbar("删除失败")
+                                                }
+                                            }
+                                        }
+                                    }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("删除ncm") },
+                                    onClick = {
+                                        expanded = false
+                                        file.uri.let { uri ->
+                                            scope.launch {
+                                                val success = FileUtils.deleteFile(context, uri)
+                                                if (success) {
+                                                    navigator.pop()
+                                                } else {
+                                                    snackbarHostState.showSnackbar("删除失败")
+                                                }
+                                            }
+                                        }
+                                    }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("全部删除") },
+                                    onClick = {
+                                        expanded = false
+                                        file.mp3Uri?.let { uri ->
+                                            scope.launch {
+                                                val success = FileUtils.deleteFile(context, uri)
+                                                if (success) {
+                                                    navigator.pop()
+                                                } else {
+                                                    snackbarHostState.showSnackbar("删除失败")
+                                                }
+                                            }
+                                        }
+                                        file.uri.let { uri ->
+                                            scope.launch {
+                                                val success = FileUtils.deleteFile(context, uri)
+                                                if (success) {
+                                                    navigator.pop()
+                                                } else {
+                                                    snackbarHostState.showSnackbar("删除失败")
+                                                }
+                                            }
+                                        }
+                                    }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("删除mp3并加入黑名单") },
+                                    onClick = {
+                                        file.mp3Uri?.let { uri ->
+                                            scope.launch {
+                                                val success = FileUtils.deleteFile(context, uri)
+                                                if (success) {
+                                                    navigator.pop()
+                                                } else {
+                                                    snackbarHostState.showSnackbar("删除失败")
+                                                }
+                                            }
+                                        }
+                                    }
                                 )
                             }
-                        },
-                        enabled = !isConverting && file.taskState != TaskState.Dumped && !outputDir.isNullOrEmpty()
-                    ) {
-                        Text(if (isConverting) "转换中..."
-                        else if (outputDir.isNullOrEmpty()) "请先设置输出目录"
-                        else if (file.taskState == TaskState.Dumped) "已转换" else "转换")
+                        }
                     }
                 }
 
@@ -149,7 +251,17 @@ data class MusicDetailScreen(val file: NcmFile) : Screen {
 
                 Text(
                     "File Size: ${FormatUtils.formatSize(file.size)}",
-                    modifier = Modifier.padding(bottom = 15.dp)
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+
+                Text(
+                    "Ncm Name: ${file.uri}",
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+
+                Text(
+                    "Mp3 Name: ${file.mp3Uri}",
+                    modifier = Modifier.padding(bottom = 16.dp)
                 )
             }
         }

@@ -7,7 +7,9 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
@@ -90,6 +92,16 @@ class SettingTab : Tab {
                         title = "输出目录",
                         subtitle = FormatUtils.formatPath(outputDir),
                         onClick = { outputDirLauncher.launch(null) }
+                    )
+
+                    Spacer(
+                        modifier = Modifier.height(30.dp)
+                    )
+
+                    Text(
+                        "调试选项",
+                        style = MaterialTheme.typography.titleLarge,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 5.dp)
                     )
                 }
             }
